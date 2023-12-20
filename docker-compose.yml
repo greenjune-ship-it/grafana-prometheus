@@ -1,0 +1,42 @@
+version: '3'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus:/etc/prometheus
+      - ./prometheus/data:/prometheus/data:rw
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+
+  node-exporter:
+    image: prom/node-exporter:v1.2.2
+    ports:
+      - '9100:9100'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - 8445:3000  # Mapping host port 8445 to container port 3000 (HTTPS)
+    volumes:
+      - ./grafana:/var/lib/grafana:rw
+      - /etc/ssl/symportal:/certs:ro  # Mount the directory containing certificate files
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SERVER_DOMAIN=symportal.org
+      - GF_SERVER_HTTPS_PORT=8445  # Update the HTTPS port
+      - GF_SERVER_PROTOCOL=https   # Set the protocol to HTTPS
+      - GF_SERVER_CERT_FILE=/certs/symportal.org.crt  # Update the paths
+      - GF_SERVER_CERT_KEY=/certs/symportal.org.key   # Update the paths
